@@ -81,8 +81,13 @@ jobs:
           fi
           echo "All local asset references resolved."
 
+      # enablement: true turns Pages on via the API using the pages:write permission
+      # above, so a fresh clone of this repo deploys without anyone first visiting
+      # Settings → Pages. Without it the first run dies on "Get Pages site failed".
       - name: Configure Pages
         uses: actions/configure-pages@v5
+        with:
+          enablement: true
 
       - name: Upload site artifact
         uses: actions/upload-pages-artifact@v3
