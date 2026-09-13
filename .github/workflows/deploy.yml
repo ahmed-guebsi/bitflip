@@ -81,13 +81,13 @@ jobs:
           fi
           echo "All local asset references resolved."
 
-      # enablement: true turns Pages on via the API using the pages:write permission
-      # above, so a fresh clone of this repo deploys without anyone first visiting
-      # Settings → Pages. Without it the first run dies on "Get Pages site failed".
+      # Pages must already be enabled with Source = "GitHub Actions" (see header).
+      # `enablement: true` is NOT used here: creating a Pages site is an admin-level
+      # API call, and this repo's Actions default is read-only, so the job token gets
+      # "Resource not accessible by integration". Enabling it once, out of band, is
+      # the same prerequisite the portfolio deployment has.
       - name: Configure Pages
         uses: actions/configure-pages@v5
-        with:
-          enablement: true
 
       - name: Upload site artifact
         uses: actions/upload-pages-artifact@v3
