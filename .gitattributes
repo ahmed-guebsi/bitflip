@@ -1,0 +1,10 @@
+# Normalize text files to LF in the repository (deploy target is Linux)
+* text=auto eol=lf
+
+# Vendored design-component runtime — store verbatim, never normalize
+support.js -text
+
+# Binary assets
+*.png      binary
+*.webp     binary
+.thumbnail binary

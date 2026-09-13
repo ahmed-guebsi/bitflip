@@ -1,0 +1,29 @@
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*~
+
+# Logs & temp
+*.log
+*.tmp
+
+# Local secrets — never commit these
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Node (only if a build step is ever added)
+node_modules/
+.cache/
+
+# Local deploy staging (the workflow rebuilds this in CI)
+_site/

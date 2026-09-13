@@ -1,0 +1,94 @@
+name: Deploy to GitHub Pages
+
+# BitFlip is a zero-dependency static site: no npm, no bundler, no server. React and
+# the design-component runtime are fetched from a CDN at runtime, so there is nothing
+# to install, compile or cache — adding setup-node or a dependency cache here would be
+# infrastructure that never does any work.
+#
+# There IS one real build step: the authored entry point is "Madous Microverse.dc.html"
+# (the design-canvas source of truth), but Pages needs index.html to serve the root URL.
+# CI stages a clean _site/ instead of duplicating an 83 KB file in the repo, so the
+# canvas file stays the single source of truth and the two can never drift.
+#
+# One-time setup: repo Settings → Pages → Build and deployment → Source = "GitHub Actions".
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow one concurrent deployment; newer pushes cancel in-progress runs.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Stage site
+        run: |
+          set -euo pipefail
+          SRC="Madous Microverse.dc.html"
+          test -f "$SRC" || { echo "::error::Entry document '$SRC' is missing"; exit 1; }
+
+          mkdir -p _site
+          cp "$SRC" _site/index.html
+          cp support.js anim.js plots.js hardware.js _site/
+          # Bypass Jekyll: it would otherwise ignore files it considers special.
+          touch _site/.nojekyll
+
+          echo "Staged:"
+          ls -la _site
+
+      - name: Verify artifact integrity
+        run: |
+          set -euo pipefail
+          test -s _site/index.html || { echo "::error::index.html is empty"; exit 1; }
+          grep -q "<x-dc>" _site/index.html \
+            || { echo "::error::index.html has no <x-dc> block — the canvas source did not copy correctly"; exit 1; }
+
+          # There is no compiler to catch a renamed or deleted module, so assert that
+          # every locally-referenced asset actually shipped in the artifact.
+          missing=0
+          refs=$(grep -oE '(src|from)="[^"]+"' _site/index.html | sed -E 's/^(src|from)="//; s/"$//' | sort -u)
+          while IFS= read -r ref; do
+            case "$ref" in
+              http://*|https://*|//*|data:*|'#'*|'') continue ;;
+            esac
+            if [ -f "_site/${ref#./}" ]; then
+              echo "  ok       $ref"
+            else
+              echo "  MISSING  $ref"
+              missing=1
+            fi
+          done <<< "$refs"
+
+          if [ "$missing" -ne 0 ]; then
+            echo "::error::index.html references assets that are not in the deploy artifact"
+            exit 1
+          fi
+          echo "All local asset references resolved."
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload site artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
